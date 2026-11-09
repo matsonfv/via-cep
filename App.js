@@ -1,79 +1,171 @@
 // Arquivo: App.js
 
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ActivityIndicator,
+  TextInput,
+} from 'react-native';
 
 export default function App() {
-  // 1. Estado para guardar o cep que virá da internet
   const [cep, setCep] = useState('');
-  
-  // 2. Estado para mostrar um "Carregando..." enquanto a internet pensa
-  const [carregando, setCarregando] = useState(true);
+  const [endereco, setEndereco] = useState('');
+  const [carregando, setCarregando] = useState(false);
 
-  // 3. A função que vai até a internet buscar o dado
-  const buscarCep = async (cep) => {
-    setCarregando(true); // Liga o aviso de carregando
+  const buscarCep = async (cepDigitado) => {
+    const valor = (cepDigitado || '').replace(/\D/g, '');
+
+    if (!valor || valor.length !== 8) {
+      setEndereco('Digite um CEP válido com 8 números.');
+      return;
+    }
+
+    setCarregando(true);
     try {
-      // Fazemos a requisição para a API de cep
-      const resposta = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const resposta = await fetch(`https://viacep.com.br/ws/${valor}/json/`);
       const dados = await resposta.json();
 
-      // Verificamos se houve algum erro na busca
       if (dados.erro) {
-        setCep('CEP não encontrado.');
+        setEndereco('CEP não encontrado.');
       } else {
-        // Salvamos o texto do cep no nosso Estado
-        setCep(dados.logradouro);
+        setEndereco(dados.logradouro || 'CEP encontrado, mas sem logradouro.');
       }
-    } catch (erro) {
-      setCep('Ops! Não foi possível conectar à internet.');
+    } catch {
+      setEndereco('Ops! Não foi possível conectar à internet.');
     } finally {
-      setCarregando(false); // Desliga o aviso de carregando
+      setCarregando(false);
     }
   };
 
-  // 4. O mágico useEffect! 
-  // Ele chama a função buscarCep() UMA ÚNICA VEZ quando o App abre.
-  useEffect(() => {
-    buscarCep(cep);
-  }, []); // <-- Array vazio garante que rode apenas na montagem da tela
-
   return (
     <View style={styles.container}>
-      <Text style={styles.titulo}>Buscar endereço</Text>
+      <View style={styles.panel}>
+        <Text style={styles.eyebrow}>CEP</Text>
+        <Text style={styles.titulo}>Buscar endereço</Text>
 
-      {/* Renderização Condicional: Mostra a bolinha girando ou o endereço */}
-      {carregando ? (
-        <ActivityIndicator size="large" color="#3498db" />
-      ) : (
-        <View style={styles.card}>
-          <Text style={styles.textoCep}>{cep}</Text>
-        </View>
-      )}
+        <TextInput
+          style={styles.input}
+          placeholder="Digite o CEP"
+          placeholderTextColor="#8a8f98"
+          keyboardType="numeric"
+          value={cep}
+          onChangeText={setCep}
+          maxLength={8}
+        />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Digite o CEP"
-        keyboardType="numeric"
-        value={cep}
-        onChangeText={setCep}
-      />
+        <TouchableOpacity style={styles.botao} onPress={() => buscarCep(cep)}>
+          <Text style={styles.textoBotao}>Buscar</Text>
+        </TouchableOpacity>
 
-      {/* Botão extra caso o usuário queira buscar outro cep manualmente */}
-      <TouchableOpacity style={styles.botao} onPress={() => buscarCep(cep)}>
-        <Text style={styles.textoBotao}>Buscar</Text>
-      </TouchableOpacity>
+        {carregando ? (
+          <View style={styles.loaderBox}>
+            <ActivityIndicator size="small" color="#1f2937" />
+            <Text style={styles.loaderText}>Consultando...</Text>
+          </View>
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>Resultado</Text>
+            <Text style={styles.textoCep}>{endereco || 'Ainda não consultado.'}</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
 
-// Arquivo: App.js (Continuação - Estilos)
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#2c3e50', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  titulo: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 30 },
-  card: { backgroundColor: '#ecf0f1', padding: 30, borderRadius: 15, marginBottom: 30, width: '100%', alignItems: 'center', elevation: 5 },
-  textoCep: { fontSize: 20, color: '#2c3e50', fontStyle: 'italic', textAlign: 'center', lineHeight: 30 },
-  botao: { backgroundColor: '#3498db', paddingVertical: 15, paddingHorizontal: 30, borderRadius: 8 },
-  input: { backgroundColor: '#fff', padding: 15, borderRadius: 8, marginBottom: 20, width: '100%' },
-  textoBotao: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  panel: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6b7280',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  titulo: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 20,
+  },
+  input: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 18,
+    color: '#111827',
+    marginBottom: 16,
+  },
+  botao: {
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+  },
+  textoBotao: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loaderBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  loaderText: {
+    color: '#374151',
+    fontSize: 14,
+  },
+  card: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    padding: 16,
+  },
+  cardLabel: {
+    fontSize: 11,
+    color: '#6b7280',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  textoCep: {
+    fontSize: 18,
+    color: '#111827',
+    lineHeight: 26,
+  },
 });
